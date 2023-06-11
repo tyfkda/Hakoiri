@@ -1,8 +1,10 @@
 mod hakoiri;
 
-use hakoiri::{parse_board};
+use std::error::Error;
 
-fn main() {
+use hakoiri::{parse_board, solve};
+
+fn main() -> Result<(), Box<dyn Error>> {
     let initial_arrange: String = [
         "1002",
         "1002",
@@ -10,7 +12,9 @@ fn main() {
         "3784",
         "6..9",
     ].join("");
-    let arrange = parse_board(initial_arrange);
+    let (board, positions, pieces) = parse_board(initial_arrange)?;
 
-    println!("{:?}", &arrange);
+    solve(board, positions, pieces);
+
+    Ok(())
 }
