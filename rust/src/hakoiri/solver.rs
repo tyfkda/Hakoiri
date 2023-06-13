@@ -1,4 +1,8 @@
+use std::collections::{HashSet, VecDeque};
+
 use super::{BoardStr, Dir, Piece, Pos, Size, BOARD_H, BOARD_W, SPACE, board_at, find_spaces};
+
+const GOAL_POS: Pos = Pos {x: 1, y: 3};
 
 pub fn solve(board: BoardStr, positions: Vec<Pos>, pieces: Vec<Piece>) {
     let mut solver = Solver::new(pieces);
@@ -18,8 +22,53 @@ impl Solver {
     }
 
     fn solve(&mut self, board: BoardStr, positions: Vec<Pos>) {
-        let movables = self.find_movable_pieces(&board, &positions);
-        println!("Movables: {:?}", &movables);
+        let mut deq = VecDeque::from([(0, board.clone(), positions.clone(), Vec::new() as Vec<(usize, Dir)>)]);
+        let mut board_hashes: HashSet<BoardStr> = HashSet::new();
+
+        let mut check_count = 0;
+        while !deq.is_empty() {
+            check_count += 1;
+            let (steps, board, positions, hands) = deq.pop_front().unwrap();
+            if board_hashes.contains(&board) { continue; }
+            board_hashes.insert(board.clone());
+            if self.is_solved(&board, &positions) {
+                println!("Solved!, steps={steps}, check=#{check_count}, left={}, hash={}", deq.len(), board_hashes.len());
+                println!("Hands #{}: {:?}", hands.len(), &hands);
+                print_board(&board);
+                break;
+            }
+
+            let movables = self.find_movable_pieces(&board, &positions);
+            for (i, dir) in movables {
+                let mut board2 = board.clone();
+                let mut pos = positions[i].clone();
+                self.move_piece(&mut board2, &mut pos, i, dir);
+                if !board_hashes.contains(&board2) {
+                    let mut positions2 = positions.clone();
+                    positions2[i] = pos;
+                    let steps2 = steps + if !hands.is_empty() && i == hands[hands.len() - 1].0 { 0 } else { 1 };
+                    let mut hands2 = hands.clone();
+                    hands2.push((i, dir));
+                    deq.push_back((steps2, board2, positions2, hands2));
+                }
+            }
+        }
+    }
+
+    fn is_solved(&self, _board: &BoardStr, positions: &Vec<Pos>) -> bool {
+        positions[0] == GOAL_POS
+    }
+
+    fn move_piece(&mut self, board: &mut BoardStr, pos: &mut Pos, i: usize, dir: Dir) {
+        let (c, size) = &self.pieces[i];
+        put_board(board, pos, size, SPACE);
+        match dir {
+            Dir::Left  => pos.x -= 1,
+            Dir::Right => pos.x += 1,
+            Dir::Up    => pos.y -= 1,
+            Dir::Down  => pos.y += 1,
+        }
+        put_board(board, pos, size, *c);
     }
 
     fn find_movable_pieces(&self, board: &BoardStr, positions: &[Pos]) -> Vec<(usize, Dir)> {
@@ -73,5 +122,19 @@ fn is_movable(pos: &Pos, size: &Size, dir: Dir, board: &BoardStr) -> bool {
 
         let ay = if dir == Dir::Up { pos.y - 1} else { pos.y + size.h };
         (0..size.w).all(|i| board_at(board, &Pos {x: pos.x + i, y: ay}) == SPACE)
+    }
+}
+
+fn put_board(board: &mut BoardStr, pos: &Pos, size: &Size, c: char) {
+    for i in 0..size.h {
+        for j in 0..size.w {
+            unsafe { board.as_bytes_mut()[(pos.y + i) as usize * BOARD_W + (pos.x + j) as usize] = c as u8; }
+        }
+    }
+}
+
+fn print_board(board: &BoardStr) {
+    for i in 0..BOARD_H {
+        println!("{:}", &board[(i * BOARD_W)..((i + 1) * BOARD_W)]);
     }
 }
