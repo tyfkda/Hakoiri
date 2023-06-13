@@ -20,6 +20,14 @@ pub struct Size {
     pub h: u8,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Dir {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
 pub type BoardStr = String;
 pub type Piece = (char, Size);
 
