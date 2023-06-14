@@ -34,7 +34,7 @@ impl Solver {
             if self.is_solved(&board, &positions) {
                 println!("Solved!, steps={steps}, check=#{check_count}, left={}, hash={}", deq.len(), board_hashes.len());
                 println!("Hands #{}: {:?}", hands.len(), &hands);
-                print_board(&board);
+                print_board(&positions, &self.pieces);
                 break;
             }
 
@@ -63,15 +63,15 @@ impl Solver {
     }
 
     fn move_piece(&mut self, board: &mut BoardStr, pos: &mut Pos, i: usize, dir: Dir) {
-        let (c, size) = &self.pieces[i];
-        put_board(board, pos, size, SPACE);
+        let (_, size) = self.pieces[i];
+        put_board(board, pos, size, Size::Empty);
         match dir {
             Dir::Left  => pos.x -= 1,
             Dir::Right => pos.x += 1,
             Dir::Up    => pos.y -= 1,
             Dir::Down  => pos.y += 1,
         }
-        put_board(board, pos, size, *c);
+        put_board(board, pos, size, size);
     }
 
     fn find_movable_pieces(&self, board: &BoardStr, positions: &[Pos]) -> Vec<(usize, Dir)> {
@@ -80,8 +80,8 @@ impl Solver {
         let mut movables = Vec::new();
         for i in 0..positions.len() {
             for space in &spaces {
-                if let Some(dir) = is_adjacent(&positions[i], &self.pieces[i].1, space) {
-                    if is_movable(&positions[i], &self.pieces[i].1, dir, &board) {
+                if let Some(dir) = is_adjacent(&positions[i], self.pieces[i].1, space) {
+                    if is_movable(&positions[i], self.pieces[i].1, dir, &board) {
                         let target = (i, dir);
                         if movables.iter().all(|e| *e != target) {
                             movables.push((i, dir));
@@ -94,50 +94,65 @@ impl Solver {
     }
 }
 
-fn is_adjacent(pos: &Pos, size: &Size, space: &Pos) -> Option<Dir> {
-    if space.x >= pos.x && space.x < pos.x + size.w {
+fn is_adjacent(pos: &Pos, size: Size, space: &Pos) -> Option<Dir> {
+    let w = size.w();
+    let h = size.h();
+    if space.x >= pos.x && space.x < pos.x + w {
         if space.y + 1 == pos.y {
             return Some(Dir::Up);
-        } else if space.y == pos.y + size.h {
+        } else if space.y == pos.y + h {
             return Some(Dir::Down);
         }
     }
-    if space.y >= pos.y && space.y < pos.y + size.h {
+    if space.y >= pos.y && space.y < pos.y + h {
         if space.x + 1 == pos.x {
             return Some(Dir::Left);
-        } else if space.x == pos.x + size.w {
+        } else if space.x == pos.x + w {
             return Some(Dir::Right);
         }
     }
     None
 }
 
-fn is_movable(pos: &Pos, size: &Size, dir: Dir, board: &BoardStr) -> bool {
+fn is_movable(pos: &Pos, size: Size, dir: Dir, board: &BoardStr) -> bool {
+    let w = size.w();
+    let h = size.h();
     if dir == Dir::Left || dir == Dir::Right {
         if dir == Dir::Left { if pos.x <= 0 { return false; } }
-        else { if pos.x + size.w >= BOARD_W as u8 { return false; } }
+        else { if pos.x + w >= BOARD_W as u8 { return false; } }
 
-        let ax = if dir == Dir::Left { pos.x - 1} else { pos.x + size.w };
-        (0..size.h).all(|i| board_at(board, &Pos {x: ax, y: pos.y + i}) == SPACE)
+        let ax = if dir == Dir::Left { pos.x - 1} else { pos.x + w };
+        (0..h).all(|i| board_at(board, &Pos {x: ax, y: pos.y + i}) == Size::Empty)
     } else {
         if dir == Dir::Up { if pos.y <= 0 { return false; } }
-        else { if pos.y + size.h >= BOARD_H as u8 { return false; } }
+        else { if pos.y + h >= BOARD_H as u8 { return false; } }
 
-        let ay = if dir == Dir::Up { pos.y - 1} else { pos.y + size.h };
-        (0..size.w).all(|i| board_at(board, &Pos {x: pos.x + i, y: ay}) == SPACE)
+        let ay = if dir == Dir::Up { pos.y - 1} else { pos.y + h };
+        (0..w).all(|i| board_at(board, &Pos {x: pos.x + i, y: ay}) == Size::Empty)
     }
 }
 
-fn put_board(board: &mut BoardStr, pos: &Pos, size: &Size, c: char) {
-    for i in 0..size.h {
-        for j in 0..size.w {
-            unsafe { board.as_bytes_mut()[(pos.y + i) as usize * BOARD_W + (pos.x + j) as usize] = c as u8; }
+fn put_board(board: &mut BoardStr, pos: &Pos, size: Size, s: Size) {
+    let w = size.w();
+    for i in 0..size.h() {
+        for j in 0..w {
+            board.b[(pos.y + i) as usize * BOARD_W + (pos.x + j) as usize] = s;
         }
     }
 }
 
-fn print_board(board: &BoardStr) {
+fn print_board(positions: &[Pos], pieces: &[Piece]) {
+    let mut s = [SPACE; BOARD_W * BOARD_H];
+    for (pos, (c, size)) in positions.iter().zip(pieces) {
+        let w = size.w();
+        let h = size.h();
+        for i in 0..h {
+            for j in 0..w {
+                s[(pos.y + i) as usize * BOARD_W + (pos.x + j) as usize] = *c;
+            }
+        }
+    }
     for i in 0..BOARD_H {
-        println!("{:}", &board[(i * BOARD_W)..((i + 1) * BOARD_W)]);
+        println!("{}", &s[(i * BOARD_W)..((i + 1) * BOARD_W)].iter().collect::<String>());
     }
 }
