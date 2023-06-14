@@ -30,7 +30,7 @@ impl Solver {
             check_count += 1;
             let (steps, board, positions, hands) = deq.pop_front().unwrap();
             if board_hashes.contains(&board) { continue; }
-            board_hashes.insert(board.clone());
+            self.register_board(&mut board_hashes, &board);
             if self.is_solved(&board, &positions) {
                 println!("Solved!, steps={steps}, check=#{check_count}, left={}, hash={}", deq.len(), board_hashes.len());
                 println!("Hands #{}: {:?}", hands.len(), &hands);
@@ -56,6 +56,19 @@ impl Solver {
                 }
             }
         }
+    }
+
+    fn register_board(&self, board_hashes: &mut HashSet<BoardStr>, board: &BoardStr) {
+        board_hashes.insert(board.clone());
+
+        let mut flipx = board.clone();
+        for y in 0..BOARD_H {
+            let i = y * BOARD_W;
+            for x in 0..BOARD_W / 2 {
+                flipx.b.swap(i + x, i + BOARD_W - 1 - x);
+            }
+        }
+        board_hashes.insert(flipx);
     }
 
     fn is_solved(&self, _board: &BoardStr, positions: &Vec<Pos>) -> bool {
