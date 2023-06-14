@@ -46,10 +46,13 @@ impl Solver {
                 if !board_hashes.contains(&board2) {
                     let mut positions2 = positions.clone();
                     positions2[i] = pos;
-                    let steps2 = steps + if !hands.is_empty() && i == hands[hands.len() - 1].0 { 0 } else { 1 };
                     let mut hands2 = hands.clone();
                     hands2.push((i, dir));
-                    deq.push_back((steps2, board2, positions2, hands2));
+                    if !hands.is_empty() && i == hands[hands.len() - 1].0 {
+                        deq.push_front((steps, board2, positions2, hands2));
+                    } else {
+                        deq.push_back((steps + 1, board2, positions2, hands2));
+                    }
                 }
             }
         }
