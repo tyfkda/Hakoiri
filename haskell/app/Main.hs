@@ -1,6 +1,16 @@
 module Main (main) where
 
-import Lib
+import Hakoiri (parseBoard)
+
+initialArrange :: [String]
+initialArrange = [
+    "1002",
+    "1002",
+    "3554",
+    "3784",
+    "6..9"
+    ]
 
 main :: IO ()
-main = someFunc
+main = do
+    print $ parseBoard initialArrange
