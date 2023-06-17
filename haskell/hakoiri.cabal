@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Hakoiri
+      Solver
   other-modules:
       Paths_hakoiri
   hs-source-dirs:

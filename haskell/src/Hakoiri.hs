@@ -1,6 +1,6 @@
 module Hakoiri
-    ( BitBoard, BoardStr, Piece, PieceArray, Pos, PositionArray
-    , boardH, boardW, parseBoard
+    ( BitBoard, BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
+    , boardH, boardW, getWH, parseBoard
     ) where
 
 import Data.Array (Array)
@@ -52,6 +52,9 @@ getWH size = case size of
     Size2x1  -> (2, 1)
     Size1x2  -> (1, 2)
     Size2x2  -> (2, 2)
+
+data Dir = DLeft | DRight | DUp | DDown
+    deriving (Eq, Show)
 
 parsePiece :: Pos -> BitBoard -> [String] -> Maybe (Int, Size, BitBoard)
 parsePiece (x, y) bitboard rawboard = result

@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Hakoiri (parseBoard)
+import Solver (solve)
 
 initialArrange :: [String]
 initialArrange = [
@@ -13,4 +14,5 @@ initialArrange = [
 
 main :: IO ()
 main = do
-    print $ parseBoard initialArrange
+    let (board, positions, pieces) = parseBoard initialArrange
+    print $ solve pieces positions board
