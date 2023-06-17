@@ -1,21 +1,43 @@
 module Solver
-    ( PieceArray, PositionArray
+    ( Hand, PieceArray, PositionArray
     , solve
     ) where
 import Data.Array (assocs, indices, (!))
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (catMaybes, isNothing)
 
-import Hakoiri (BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, getWH)
+import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray
+               , boardW, boardH, getWH )
 
-solve :: PieceArray -> PositionArray -> BoardStr -> [Piece]
-solve pieces positions board = adjacentPieces
+type Hand = (Int, Dir)
+
+solve :: PieceArray -> PositionArray -> BoardStr -> [Hand]
+solve = findMovablePieces
+
+findMovablePieces :: PieceArray -> PositionArray -> BoardStr -> [Hand]
+findMovablePieces pieces positions board = adjacentPieces
     where
+        adjacentPieces = catMaybes [(,) i <$> f (positions ! i) (pieces ! i) space | i <- indices positions, space <- spaces]
         spaces = findSpaces board
-        adjacentPieces = [pieces ! i | i <- indices positions, any (f (positions ! i) (pieces ! i)) spaces]
-        f pos piece space = isJust $ isAdjacent space pos piece
+        f pos piece space = do
+            dir <- isAdjacent space pos piece
+            if isMovable pos piece dir board
+                then Just dir
+                else Nothing
 
 findSpaces :: BoardStr -> [Pos]
 findSpaces board = [pos | (pos, size) <- assocs board, isNothing size]
+
+isMovable :: Pos -> Piece -> Dir -> BoardStr -> Bool
+isMovable (x, y) (_, size) dir board
+    | isHorz     = not isWallX && all (\dy -> isNothing (board ! (ax, y + dy))) [0..h-1]
+    | otherwise  = not isWallY && all (\dx -> isNothing (board ! (x + dx, ay))) [0..w-1]
+    where
+        (w, h) = getWH size
+        isHorz = dir == DLeft || dir == DRight
+        isWallX = (dir == DLeft && x <= 0) || (dir == DRight && x + w >= boardW)
+        ax = if dir == DLeft then x - 1 else x + w
+        isWallY = (dir == DUp && y <= 0) || (dir == DDown && y + h >= boardH)
+        ay = if dir == DUp then y - 1 else y + h
 
 isAdjacent :: Pos -> Pos -> Piece -> Maybe Dir
 isAdjacent (sx, sy) (px, py) (_, size)
