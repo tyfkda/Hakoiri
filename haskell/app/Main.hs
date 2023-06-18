@@ -39,7 +39,7 @@ main :: IO ()
 main = do
     let (board, positions, pieces) = parseBoard initialArrange
     let nodes = solve pieces positions board
-    forM_ (take 10 nodes) $ \(aa, pp) -> do
+    forM_ (take 100 nodes) $ \(aa, pp) -> do
         print aa
         printBoard pp pieces
         putStrLn ""

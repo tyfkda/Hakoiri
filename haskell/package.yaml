@@ -37,6 +37,8 @@ library:
   source-dirs: src
   dependencies:
   - array
+  - hashable
+  - unordered-containers
 
 executables:
   hakoiri-exe:

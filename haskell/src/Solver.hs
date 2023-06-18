@@ -3,8 +3,10 @@ module Solver
     , solve
     ) where
 import Control.Monad (forM_)
-import Data.Array (assocs, indices, (!), (//))
-import Data.Array.ST (runSTArray, writeArray, thaw)
+import Data.Array (assocs, elems, indices, (!), (//))
+import Data.Array.ST (runSTArray, thaw, newArray_)
+import Data.Array.MArray (writeArray)
+import qualified Data.HashSet as HS
 import Data.List (unfoldr)
 import Data.Maybe (catMaybes, isNothing)
 
@@ -17,11 +19,23 @@ solve :: PieceArray -> PositionArray -> BoardStr -> [([Hand], PositionArray)]
 solve pieces positions board = solveRecur pieces (positions, board)
 
 solveRecur :: PieceArray -> (PositionArray, BoardStr) -> [([Hand], PositionArray)]
-solveRecur pieces (pp0, bb0) = unfoldr f [(pp0, bb0, [])]
+solveRecur pieces (pp0, bb0) = unfoldr f ([(pp0, bb0, [])], HS.empty)
     where
-        f []                     = Nothing
-        f ((pp, bb, aa): nodes)  = Just ((aa, pp), nodes ++ nexts pp bb aa)
+        f ([], _)                      = Nothing
+        f ((pp, bb, aa): nodes, hh)
+            | HS.member (elems bb) hh  = f (nodes, hh)
+            | otherwise                = Just ((aa, pp), (nodes ++ nexts pp bb aa, reg bb hh))
         nexts pp bb aa = [(pp', bb', hand: aa) | (hand, pp', bb') <- moveOneStep pieces pp bb]
+        reg bb = HS.insert (elems $ flipHorz bb) . HS.insert (elems bb)
+
+flipHorz :: BoardStr -> BoardStr
+flipHorz bb = runSTArray $ do
+    arr <- newArray_ ((0, 0), (boardW - 1, boardH - 1))
+    forM_ [0..boardH - 1] $ \y -> do
+        forM_ [0..boardW - 1] $ \x -> do
+            let s = bb ! (boardW - 1 - x, y)
+            writeArray arr (x, y) s
+    return arr
 
 moveOneStep :: PieceArray -> PositionArray -> BoardStr -> [(Hand, PositionArray, BoardStr)]
 moveOneStep pieces positions board = map (oneStep positions pieces board) targetPieces

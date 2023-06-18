@@ -11,6 +11,7 @@ import Data.Array.ST (runSTArray, MArray (..), writeArray)
 import Data.Bits (shiftL, (.&.), (.|.))
 import Data.Char (isDigit, ord)
 import Data.Int (Int64)
+import Data.Hashable (Hashable (..))
 import Data.List (foldl', unfoldr)
 import Control.Monad (forM_)
 
@@ -48,6 +49,12 @@ hex2Deci c
 
 data Size = Size1x1 | Size2x1 | Size1x2 | Size2x2
     deriving (Eq, Show)
+
+instance Hashable Size where
+    hashWithSalt i Size1x1 = i * 977 + 1
+    hashWithSalt i Size2x1 = i * 977 + 2
+    hashWithSalt i Size1x2 = i * 977 + 3
+    hashWithSalt i Size2x2 = i * 977 + 4
 
 getSize :: Int -> Int -> Maybe Size
 getSize w h
