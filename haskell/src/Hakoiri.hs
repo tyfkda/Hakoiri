@@ -1,6 +1,8 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Hakoiri
     ( BitBoard, BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
-    , boardH, boardW, getWH, parseBoard
+    , boardH, boardW, getDXY, getWH, parseBoard
     ) where
 
 import Data.Array (Array)
@@ -18,6 +20,15 @@ type Piece = (Int, Size)
 type PositionArray = Array Int Pos
 type PieceArray = Array Int Piece
 type BitBoard = Int64
+
+instance (Num a, Num b) => Num (a, b) where
+    (x1, y1) + (x2, y2) = (x1 + x2, y1 + y2)
+    (x1, y1) - (x2, y2) = (x1 - x2, y1 - y2)
+    _ * _ = undefined
+    negate (x, y) = (-x, -y)
+    abs _ = undefined
+    signum _ = undefined
+    fromInteger x = (fromInteger x, 0)
 
 boardW :: Int
 boardW = 4
@@ -55,6 +66,12 @@ getWH size = case size of
 
 data Dir = DLeft | DRight | DUp | DDown
     deriving (Eq, Show)
+
+getDXY :: Dir -> Pos
+getDXY DLeft  = (-1,  0)
+getDXY DRight = ( 1,  0)
+getDXY DUp    = ( 0, -1)
+getDXY DDown  = ( 0,  1)
 
 parsePiece :: Pos -> BitBoard -> [String] -> Maybe (Int, Size, BitBoard)
 parsePiece (x, y) bitboard rawboard = result

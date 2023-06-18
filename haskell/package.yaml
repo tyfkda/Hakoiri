@@ -48,6 +48,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - hakoiri
+    - array
 
 tests:
   hakoiri-test:

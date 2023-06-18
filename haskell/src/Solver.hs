@@ -2,16 +2,43 @@ module Solver
     ( Hand, PieceArray, PositionArray
     , solve
     ) where
-import Data.Array (assocs, indices, (!))
+import Control.Monad (forM_)
+import Data.Array (assocs, indices, (!), (//))
+import Data.Array.ST (runSTArray, writeArray, thaw)
 import Data.Maybe (catMaybes, isNothing)
 
-import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray
-               , boardW, boardH, getWH )
+import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
+               , boardW, boardH, getDXY, getWH )
 
 type Hand = (Int, Dir)
 
-solve :: PieceArray -> PositionArray -> BoardStr -> [Hand]
-solve = findMovablePieces
+solve :: PieceArray -> PositionArray -> BoardStr -> [(Hand, PositionArray)]
+solve pieces positions board = [(hand, pp') | (hand, pp', _) <- moveOneStep pieces positions board]
+
+moveOneStep :: PieceArray -> PositionArray -> BoardStr -> [(Hand, PositionArray, BoardStr)]
+moveOneStep pieces positions board = map (oneStep positions pieces board) targetPieces
+    where
+        targetPieces = findMovablePieces pieces positions board
+
+oneStep :: PositionArray -> PieceArray -> BoardStr -> Hand -> (Hand, PositionArray, BoardStr)
+oneStep positions pieces board hand@(i, dir) = (hand, positions', board')
+    where
+        board' = modifyBoard [(pos, size, Nothing), (pos + getDXY dir, size, Just size)] board
+        positions' = positions // [(i, pos + getDXY dir)]
+        pos = positions ! i
+        (_, size) = pieces ! i
+
+modifyBoard :: [(Pos, Size, Maybe Size)] -> BoardStr -> BoardStr
+modifyBoard commands board = board'
+    where
+        board' :: BoardStr
+        board' = runSTArray $ do
+            arr <- thaw board
+            forM_ commands $ \(pos, size, c) -> do
+                let (w, h) = getWH size
+                forM_ [(dx, dy) | dy <- [0..h-1], dx <- [0..w-1]] $ \dxy -> do
+                    writeArray arr (pos + dxy) c
+            return arr
 
 findMovablePieces :: PieceArray -> PositionArray -> BoardStr -> [Hand]
 findMovablePieces pieces positions board = adjacentPieces
