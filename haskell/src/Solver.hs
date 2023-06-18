@@ -5,6 +5,7 @@ module Solver
 import Control.Monad (forM_)
 import Data.Array (assocs, indices, (!), (//))
 import Data.Array.ST (runSTArray, writeArray, thaw)
+import Data.List (unfoldr)
 import Data.Maybe (catMaybes, isNothing)
 
 import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
@@ -12,8 +13,15 @@ import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(
 
 type Hand = (Int, Dir)
 
-solve :: PieceArray -> PositionArray -> BoardStr -> [(Hand, PositionArray)]
-solve pieces positions board = [(hand, pp') | (hand, pp', _) <- moveOneStep pieces positions board]
+solve :: PieceArray -> PositionArray -> BoardStr -> [([Hand], PositionArray)]
+solve pieces positions board = solveRecur pieces (positions, board)
+
+solveRecur :: PieceArray -> (PositionArray, BoardStr) -> [([Hand], PositionArray)]
+solveRecur pieces (pp0, bb0) = unfoldr f [(pp0, bb0, [])]
+    where
+        f []                     = Nothing
+        f ((pp, bb, aa): nodes)  = Just ((aa, pp), nodes ++ nexts pp bb aa)
+        nexts pp bb aa = [(pp', bb', hand: aa) | (hand, pp', bb') <- moveOneStep pieces pp bb]
 
 moveOneStep :: PieceArray -> PositionArray -> BoardStr -> [(Hand, PositionArray, BoardStr)]
 moveOneStep pieces positions board = map (oneStep positions pieces board) targetPieces
