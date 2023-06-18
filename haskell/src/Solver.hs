@@ -7,7 +7,7 @@ import Data.Array (assocs, elems, indices, (!), (//))
 import Data.Array.ST (runSTArray, thaw, newArray_)
 import Data.Array.MArray (writeArray)
 import qualified Data.HashSet as HS
-import Data.List (unfoldr)
+import Data.List (find, unfoldr)
 import Data.Maybe (catMaybes, isNothing)
 
 import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
@@ -15,8 +15,16 @@ import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(
 
 type Hand = (Int, Dir)
 
-solve :: PieceArray -> PositionArray -> BoardStr -> [([Hand], PositionArray)]
-solve pieces positions board = solveRecur pieces (positions, board)
+targetPieceIndex :: Int
+targetPieceIndex = 0
+
+goalPos :: Pos
+goalPos = (1, 3)
+
+solve :: PieceArray -> PositionArray -> BoardStr -> Maybe ([Hand], PositionArray)
+solve pieces positions board = find solved $ solveRecur pieces (positions, board)
+    where
+        solved (_, pp) = (pp ! targetPieceIndex) == goalPos
 
 solveRecur :: PieceArray -> (PositionArray, BoardStr) -> [([Hand], PositionArray)]
 solveRecur pieces (pp0, bb0) = unfoldr f ([(pp0, bb0, [])], HS.empty)

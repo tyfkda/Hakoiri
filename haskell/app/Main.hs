@@ -38,8 +38,9 @@ printBoard positions pieces = do
 main :: IO ()
 main = do
     let (board, positions, pieces) = parseBoard initialArrange
-    let nodes = solve pieces positions board
-    forM_ (take 100 nodes) $ \(aa, pp) -> do
-        print aa
-        printBoard pp pieces
-        putStrLn ""
+    case solve pieces positions board of
+        Just (aa, pp) -> do
+            putStrLn $ show (length aa) ++ ": " ++ show (reverse aa)
+            printBoard pp pieces
+        Nothing -> do
+            putStrLn "No solution"
