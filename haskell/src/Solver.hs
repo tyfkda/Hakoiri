@@ -7,7 +7,7 @@ import Data.Array (assocs, elems, indices, (!), (//))
 import Data.Array.ST (runSTArray, thaw, newArray_)
 import Data.Array.MArray (writeArray)
 import qualified Data.HashSet as HS
-import Data.List (find, unfoldr)
+import Data.List (find, partition, unfoldr)
 import Data.Maybe (catMaybes, isNothing)
 
 import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
@@ -32,9 +32,17 @@ solveRecur pieces (pp0, bb0) = unfoldr f ([(pp0, bb0, [])], HS.empty)
         f ([], _)                      = Nothing
         f ((pp, bb, aa): nodes, hh)
             | HS.member (elems bb) hh  = f (nodes, hh)
-            | otherwise                = Just ((aa, pp), (nodes ++ nexts pp bb aa, reg bb hh))
-        nexts pp bb aa = [(pp', bb', hand: aa) | (hand, pp', bb') <- moveOneStep pieces pp bb]
+            | otherwise                = Just ((aa, pp), (nextNodes pieces nodes pp bb aa, reg bb hh))
         reg bb = HS.insert (elems $ flipHorz bb) . HS.insert (elems bb)
+
+nextNodes :: PieceArray -> [(PositionArray, BoardStr, [Hand])] -> PositionArray -> BoardStr -> [Hand]
+          -> [(PositionArray, BoardStr, [Hand])]
+nextNodes pieces nodes pp bb aa = before ++ nodes ++ after
+    where
+        (before, after) = partition f nexts
+        nexts = [(pp', bb', hand: aa) | (hand, pp', bb') <- moveOneStep pieces pp bb]
+        f (_, _, [])        = False  -- Dummy
+        f (_, _, (i, _): _) = not (null aa) && fst (head aa) == i
 
 flipHorz :: BoardStr -> BoardStr
 flipHorz bb = runSTArray $ do

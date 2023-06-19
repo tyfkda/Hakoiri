@@ -3,6 +3,7 @@ module Main (main) where
 import Control.Monad (forM_)
 import Data.Array (indices, (!))
 import Data.Array.ST (MArray (newArray), runSTArray, writeArray)
+import Data.List (group)
 
 import Hakoiri (boardH, boardW, getWH, parseBoard)
 import Solver (PieceArray, PositionArray, solve)
@@ -40,7 +41,9 @@ main = do
     let (board, positions, pieces) = parseBoard initialArrange
     case solve pieces positions board of
         Just (aa, pp) -> do
-            putStrLn $ show (length aa) ++ ": " ++ show (reverse aa)
+            putStrLn $ show (steps aa) ++ "/" ++ show (length aa) ++ ": " ++ show (reverse aa)
             printBoard pp pieces
         Nothing -> do
             putStrLn "No solution"
+    where
+        steps = length . group . map fst
