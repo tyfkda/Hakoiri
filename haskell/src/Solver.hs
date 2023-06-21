@@ -7,11 +7,12 @@ import Data.Array (assocs, elems, indices, (!), (//))
 import Data.Array.ST (runSTArray, thaw, newArray_)
 import Data.Array.MArray (writeArray)
 import qualified Data.HashSet as HS
-import Data.List (find, partition, unfoldr)
+import Data.List (find, partition)
 import Data.Maybe (catMaybes, isNothing)
 
 import Hakoiri ( BoardStr, Dir(..), Piece, PieceArray, Pos, PositionArray, Size(..)
                , boardW, boardH, getDXY, getWH )
+import Util (breadthFirstSearch)
 
 type Hand = (Int, Dir)
 
@@ -27,22 +28,23 @@ solve pieces positions board = find solved $ solveRecur pieces (positions, board
         solved (_, pp) = (pp ! targetPieceIndex) == goalPos
 
 solveRecur :: PieceArray -> (PositionArray, BoardStr) -> [([Hand], PositionArray)]
-solveRecur pieces (pp0, bb0) = unfoldr f ([(pp0, bb0, [])], HS.empty)
+solveRecur pieces (pp0, bb0) = [(aa', pp') | (pp', _, aa') <- allNodes]
     where
-        f ([], _)                      = Nothing
-        f ((pp, bb, aa): nodes, hh)
-            | HS.member (elems bb) hh  = f (nodes, hh)
-            | otherwise                = Just ((aa, pp), (nextNodes pieces nodes pp bb aa, reg bb hh))
-        reg bb = HS.insert (elems $ flipHorz bb) . HS.insert (elems bb)
+        allNodes = breadthFirstSearch (expandNode pieces) HS.empty [(pp0, bb0, [])]
 
-nextNodes :: PieceArray -> [(PositionArray, BoardStr, [Hand])] -> PositionArray -> BoardStr -> [Hand]
-          -> [(PositionArray, BoardStr, [Hand])]
-nextNodes pieces nodes pp bb aa = before ++ nodes ++ after
+type Node = (PositionArray, BoardStr, [Hand])
+type State = HS.HashSet [Maybe Size]
+
+expandNode :: PieceArray -> Node -> State -> ([Node], [Node], State)
+expandNode pieces (pp, bb, aa) hh
+    | HS.member (elems bb) hh  = ([], [], hh)
+    | otherwise                = (before, after, hh')
     where
-        (before, after) = partition f nexts
+        (before, after) = partition (isOneMove . fst . head . third) nexts
         nexts = [(pp', bb', hand: aa) | (hand, pp', bb') <- moveOneStep pieces pp bb]
-        f (_, _, [])        = False  -- Dummy
-        f (_, _, (i, _): _) = not (null aa) && fst (head aa) == i
+        isOneMove i = not (null aa) && fst (head aa) == i
+        third (_, _, x) = x
+        hh' = HS.insert (elems $ flipHorz bb) $ HS.insert (elems bb) hh
 
 flipHorz :: BoardStr -> BoardStr
 flipHorz bb = runSTArray $ do

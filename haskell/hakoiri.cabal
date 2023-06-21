@@ -27,6 +27,7 @@ library
   exposed-modules:
       Hakoiri
       Solver
+      Util
   other-modules:
       Paths_hakoiri
   hs-source-dirs:
