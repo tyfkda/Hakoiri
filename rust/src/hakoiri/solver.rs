@@ -1,41 +1,41 @@
 use std::collections::{HashSet, VecDeque};
 
-use super::{BoardStr, Dir, Piece, Pos, Size, BOARD_H, BOARD_W, SPACE, board_at, find_spaces};
+use super::{BoardStr, Dir, Piece, Pos, Size, BOARD_H, BOARD_W, board_at, find_spaces};
 
 const GOAL_POS: Pos = Pos {x: 1, y: 3};
 
-pub fn solve(board: BoardStr, positions: Vec<Pos>, pieces: Vec<Piece>) {
+pub fn solve(board: &BoardStr, positions: &[Pos], pieces: &[Piece]) -> Option<(i32, Solution, Vec<Pos>)> {
+    let positions = positions.into_iter().map(|p| p.clone()).collect::<Vec<_>>();
     let mut solver = Solver::new(pieces);
-    solver.solve(board, positions);
+    solver.solve(board.clone(), positions)
 }
+
+pub type Solution = Vec<(usize, Dir)>;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Solver {
-    pieces: Vec<Piece>,
+pub struct Solver<'a> {
+    pieces: &'a [Piece],
 }
 
-impl Solver {
-    fn new(pieces: Vec<Piece>) -> Self {
+impl<'a> Solver<'a> {
+    fn new(pieces: &'a [Piece]) -> Self {
         Self {
             pieces,
         }
     }
 
-    fn solve(&mut self, board: BoardStr, positions: Vec<Pos>) {
-        let mut deq = VecDeque::from([(0, board.clone(), positions.clone(), Vec::new() as Vec<(usize, Dir)>)]);
+    fn solve(&mut self, board: BoardStr, positions: Vec<Pos>) -> Option<(i32, Solution, Vec<Pos>)> {
+        let mut deq = VecDeque::from([(0, board, positions, Vec::new() as Vec<(usize, Dir)>)]);
         let mut board_hashes: HashSet<BoardStr> = HashSet::new();
 
-        let mut check_count = 0;
+        // let mut check_count = 0;
         while !deq.is_empty() {
-            check_count += 1;
+            // check_count += 1;
             let (steps, board, positions, hands) = deq.pop_front().unwrap();
             if board_hashes.contains(&board) { continue; }
             self.register_board(&mut board_hashes, &board);
             if self.is_solved(&board, &positions) {
-                println!("Solved!, steps={steps}, check=#{check_count}, left={}, hash={}", deq.len(), board_hashes.len());
-                println!("Hands #{}: {:?}", hands.len(), &hands);
-                print_board(&positions, &self.pieces);
-                break;
+                return Some((steps, hands, positions));
             }
 
             let movables = self.find_movable_pieces(&board, &positions);
@@ -56,6 +56,7 @@ impl Solver {
                 }
             }
         }
+        None
     }
 
     fn register_board(&self, board_hashes: &mut HashSet<BoardStr>, board: &BoardStr) {
@@ -71,7 +72,7 @@ impl Solver {
         board_hashes.insert(flipx);
     }
 
-    fn is_solved(&self, _board: &BoardStr, positions: &Vec<Pos>) -> bool {
+    fn is_solved(&self, _board: &BoardStr, positions: &[Pos]) -> bool {
         positions[0] == GOAL_POS
     }
 
@@ -151,21 +152,5 @@ fn put_board(board: &mut BoardStr, pos: &Pos, size: Size, s: Size) {
         for j in 0..w {
             board.b[(pos.y + i) as usize * BOARD_W + (pos.x + j) as usize] = s;
         }
-    }
-}
-
-fn print_board(positions: &[Pos], pieces: &[Piece]) {
-    let mut s = [SPACE; BOARD_W * BOARD_H];
-    for (pos, (c, size)) in positions.iter().zip(pieces) {
-        let w = size.w();
-        let h = size.h();
-        for i in 0..h {
-            for j in 0..w {
-                s[(pos.y + i) as usize * BOARD_W + (pos.x + j) as usize] = *c;
-            }
-        }
-    }
-    for i in 0..BOARD_H {
-        println!("{}", &s[(i * BOARD_W)..((i + 1) * BOARD_W)].iter().collect::<String>());
     }
 }
