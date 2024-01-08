@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
 use super::{BoardStr, Dir, Piece, Pos, Size, BOARD_H, BOARD_W, board_at, find_spaces};
 
@@ -10,7 +10,8 @@ pub fn solve(board: &BoardStr, positions: &[Pos], pieces: &[Piece]) -> Option<(i
     solver.solve(board.clone(), positions)
 }
 
-pub type Solution = Vec<(usize, Dir)>;
+pub type Hand = (usize, Dir);
+pub type Solution = Vec<Hand>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Solver<'a> {
@@ -26,24 +27,30 @@ impl<'a> Solver<'a> {
 
     fn solve(&mut self, board: BoardStr, positions: Vec<Pos>) -> Option<(i32, Solution, Vec<Pos>)> {
         let mut deq = VecDeque::from([(0, board, positions, Vec::new() as Vec<(usize, Dir)>)]);
-        let mut board_hashes: HashSet<BoardStr> = HashSet::new();
+        let mut board_hashes: HashMap<BoardStr, i32> = HashMap::new();
 
         // let mut check_count = 0;
         while !deq.is_empty() {
             // check_count += 1;
             let (steps, board, positions, hands) = deq.pop_front().unwrap();
-            if board_hashes.contains(&board) { continue; }
-            self.register_board(&mut board_hashes, &board);
+            let mut cont_only = false;
+            if let Some(ss) = board_hashes.get(&board) {
+                if steps > *ss { continue; }
+                assert!(steps == *ss);
+                cont_only = true;
+            }
+            self.register_board(&mut board_hashes, &board, steps);
             if self.is_solved(&board, &positions) {
                 return Some((steps, hands, positions));
             }
 
             let movables = self.find_movable_pieces(&board, &positions);
             for (i, dir) in movables {
+                if cont_only && i != hands[hands.len() - 1].0 { continue; }
                 let mut board2 = board.clone();
                 let mut pos = positions[i].clone();
                 self.move_piece(&mut board2, &mut pos, i, dir);
-                if !board_hashes.contains(&board2) {
+                if !board_hashes.contains_key(&board2) {
                     let mut positions2 = positions.clone();
                     positions2[i] = pos;
                     let mut hands2 = hands.clone();
@@ -59,8 +66,8 @@ impl<'a> Solver<'a> {
         None
     }
 
-    fn register_board(&self, board_hashes: &mut HashSet<BoardStr>, board: &BoardStr) {
-        board_hashes.insert(board.clone());
+    fn register_board(&self, board_hashes: &mut HashMap<BoardStr, i32>, board: &BoardStr, steps: i32) {
+        board_hashes.insert(board.clone(), steps);
 
         let mut flipx = board.clone();
         for y in 0..BOARD_H {
@@ -69,7 +76,7 @@ impl<'a> Solver<'a> {
                 flipx.b.swap(i + x, i + BOARD_W - 1 - x);
             }
         }
-        board_hashes.insert(flipx);
+        board_hashes.insert(flipx, steps);
     }
 
     fn is_solved(&self, _board: &BoardStr, positions: &[Pos]) -> bool {
