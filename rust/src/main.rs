@@ -12,6 +12,10 @@ struct Args {
     /// Print solution interactively.
     #[arg(long)]
     interactive: bool,
+
+    /// Initial board arrangement (length: 5x4).
+    #[arg(long)]
+    board: Option<String>,
 }
 
 fn print_board(positions: &[Pos], pieces: &[Piece]) {
@@ -153,13 +157,21 @@ fn print_solution_interactive(positions: &Vec<Pos>, pieces: &[Piece], hands: &[(
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let initial_arrange: String = [
-        "1002",
-        "1002",
-        "3554",
-        "3784",
-        "6..9",
-    ].join("");
+    let initial_arrange = if let Some(board) = args.board {
+        if board.len() != BOARD_W * BOARD_H {
+            return Err("Invalid board length".into());
+        }
+        board
+    } else {
+        [
+            "1002",
+            "1002",
+            "3554",
+            "3784",
+            "6..9",
+        ].join("")
+    };
+
     let (board, positions, pieces) = parse_board(initial_arrange)?;
 
     let Some((steps, hands, solved_positions)) = solve(&board, &positions, &pieces) else {
